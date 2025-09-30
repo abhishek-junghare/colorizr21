@@ -58,13 +58,6 @@ export interface SwatchOptions {
    */
   scale?: 'dynamic' | 'fixed';
   /**
-   * The number of steps in the swatch.
-   * - 11: Standard scale (50, 100, 200, ..., 900, 950)
-   * - 21: Extended scale (0, 50, 100, 150, ..., 900, 950, 1000)
-   * @default 11
-   */
-  swatchSteps?: 11 | 21;
-  /**
    * The variant of the swatch.
    * - 'deep': Generates rich and bold tones with significantly reduced lightness.
    * - 'neutral': Generates muted tones by reducing chroma.
@@ -107,18 +100,12 @@ export default function swatch(input: string, options: SwatchOptions = {}): Swat
     maxLightness = 0.97,
     minLightness = 0.2,
     scale = 'dynamic',
-    swatchSteps = 11,
     variant = 'base',
   } = options;
 
   invariant(
     maxLightness > minLightness && maxLightness <= 1 && minLightness >= 0,
     'maxLightness must be greater than minLightness and within the range [0, 1].',
-  );
-
-  invariant(
-    swatchSteps === 11 || swatchSteps === 21,
-    'swatchSteps must be either 11 or 21.',
   );
 
   const lch = parseCSS(input, 'oklch');
@@ -140,80 +127,38 @@ export default function swatch(input: string, options: SwatchOptions = {}): Swat
 
   const colorFormat = isHex(input) || isNamedColor(input) ? 'hex' : extractColorParts(input).model;
 
+  const steps = 11;
   let palette: Record<number, number> = {};
 
   if (scale === 'dynamic') {
-    for (let index = 0; index < swatchSteps; index++) {
+    for (let index = 0; index < steps; index++) {
       // Calculate lightness for this step
       const lightness =
-        maxLightness - (maxLightness - minLightness) * (index / (swatchSteps - 1)) ** lightnessFactor;
-      let tone: number;
+        maxLightness - (maxLightness - minLightness) * (index / (steps - 1)) ** lightnessFactor;
+      let tone = index * 100;
 
-      if (swatchSteps === 11) {
-        // Standard 11-step scale
-        if (index === 0) {
-          tone = 50;
-        } else if (index === 10) {
-          tone = 950;
-        } else {
-          tone = index * 100;
-        }
-      } else {
-        // Extended 21-step scale
-        if (index === 0) {
-          tone = 0;
-        } else if (index === 1) {
-          tone = 50;
-        } else if (index === 20) {
-          tone = 1000;
-        } else {
-          tone = (index - 1) * 50 + 50;
-        }
+      if (index === 0) {
+        tone = 50;
+      } else if (index === 10) {
+        tone = 950;
       }
 
       palette[tone] = lightness;
     }
   } else {
-    // Fixed scale
-    if (swatchSteps === 11) {
-      palette = {
-        50: 0.97,
-        100: 0.92,
-        200: 0.85,
-        300: 0.78,
-        400: 0.69,
-        500: 0.57,
-        600: 0.46,
-        700: 0.35,
-        800: 0.24,
-        900: 0.18,
-        950: 0.1,
-      };
-    } else {
-      palette = {
-        0: 0.99,
-        50: 0.97,
-        100: 0.94,
-        150: 0.91,
-        200: 0.87,
-        250: 0.83,
-        300: 0.78,
-        350: 0.73,
-        400: 0.67,
-        450: 0.61,
-        500: 0.55,
-        550: 0.49,
-        600: 0.43,
-        650: 0.38,
-        700: 0.33,
-        750: 0.28,
-        800: 0.23,
-        850: 0.19,
-        900: 0.15,
-        950: 0.1,
-        1000: 0.05,
-      };
-    }
+    palette = {
+      50: 0.97,
+      100: 0.92,
+      200: 0.85,
+      300: 0.78,
+      400: 0.69,
+      500: 0.57,
+      600: 0.46,
+      700: 0.35,
+      800: 0.24,
+      900: 0.18,
+      950: 0.1,
+    };
   }
 
   const output = Object.entries(palette).reduce(
